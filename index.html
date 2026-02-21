@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>给你的生日礼物 💕</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Noto+Serif+SC:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+/* ===================================================
+   VARIABLES & RESET
+   =================================================== */
+:root {
+  --rose:#ff6b9d; --deep:#c9184a; --gold:#ffd166;
+  --dark:#0c0810; --card-w:min(440px,92vw);
+  --light:rgba(255,220,240,.88); --dim:rgba(255,170,205,.55);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--dark);font-family:'Noto Serif SC',serif;
+  color:var(--light);overflow-x:hidden;cursor:none;}
+
+/* ===================================================
+   FIXED: CURSOR
+   =================================================== */
+#cur-dot{position:fixed;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle,#ff6b9d,#c9184a55);pointer-events:none;
+  z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen;filter:blur(.5px);}
+#cur-ring{position:fixed;width:36px;height:36px;border-radius:50%;
+  border:1.5px solid rgba(255,107,157,.4);pointer-events:none;z-index:9998;
+  transform:translate(-50%,-50%);transition:left .14s ease,top .14s ease,width .2s,height .2s,opacity .2s;}
+#cur-ring.big{width:58px;height:58px;opacity:.3;}
+
+/* ===================================================
+   FIXED: CANVASES
+   =================================================== */
+#cv-fw,#cv-pt,#cv-vis{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;}
+#cv-vis{z-index:0;}#cv-fw{z-index:1;}#cv-pt{z-index:2;}
+
+/* ===================================================
+   DYNAMIC ISLAND  —  完整重写，修复文字遮挡
+   =================================================== */
+#di{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%);
+  z-index:2000;width:min(400px,92vw);
+  font-family:'Noto Serif SC',serif;
+}
+
+/* 胶囊主体 */
+#di-pill{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(8,4,14,.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,107,157,.3);
+  border-radius:50px;
+  padding:7px 12px 7px 8px;
+  cursor:pointer;
+  box-shadow:0 4px 24px rgba(0,0,0,.6),0 0 0 1px rgba(255,107,157,.07);
+  transition:border-radius .42s cubic-bezier(.4,0,.2,1),border-color .3s;
+}
+#di-pill:hover{border-color:rgba(255,107,157,.55);}
+.di-open #di-pill{border-radius:16px 16px 0 0;border-bottom-color:transparent;}
+
+/* 专辑图标 */
+#di-art{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--deep),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:border-radius .4s;
+}
+.di-playing #di-art{animation:diSpin 7s linear infinite;border-radius:50%;}
+@keyframes diSpin{to{transform:rotate(360deg)}}
+
+/* 歌曲信息区 —— 关键：不设 overflow:hidden，靠 mask-image 做渐变淡出 */
+#di-info{
+  flex:1;
+  min-width:0;
+  display:flex;flex-direction:column;justify-content:center;gap:5px;
+  /* 右侧渐变遮罩代替 overflow:hidden 裁剪 */
+  -webkit-mask-image:linear-gradient(to right,black calc(100% - 28px),transparent 100%);
+  mask-image:linear-gradient(to right,black calc(100% - 28px),transparent 100%);
+}
+
+/* 歌名跑马灯 */
+#di-marquee{
+  display:flex;
+  width:100%;
+  overflow:hidden;
+  height:17px;
+}
+#di-name{
+  display:inline-block;
+  white-space:nowrap;
+  font-size:12px;
+  line-height:17px;
+  color:rgba(255,215,232,.92);
+  letter-spacing:.6px;
+  flex-shrink:0;
+  /* 动画由JS添加/移除 */
+}
+#di-name.scroll{animation:marquee var(--dur,8s) linear infinite;}
+@keyframes marquee{
+  0%,15%  {transform:translateX(0)}
+  75%,90% {transform:translateX(var(--dist,0px))}
+  100%    {transform:translateX(0)}
+}
+
+/* EQ 跳动条 */
+#di-eq{display:flex;align-items:flex-end;gap:2.5px;height:9px;}
+#di-eq span{
+  display:block;width:2.5px;border-radius:2px;
+  background:var(--rose);height:3px;opacity:.6;
+}
+.di-playing #di-eq span:nth-child(1){animation:eq .7s ease infinite 0s}
+.di-playing #di-eq span:nth-child(2){animation:eq .7s ease infinite .11s}
+.di-playing #di-eq span:nth-child(3){animation:eq .7s ease infinite .22s}
+.di-playing #di-eq span:nth-child(4){animation:eq .7s ease infinite .33s}
+.di-playing #di-eq span:nth-child(5){animation:eq .7s ease infinite .44s}
+@keyframes eq{0%,100%{height:3px;opacity:.4}50%{height:9px;opacity:1}}
+
+/* 控制按钮 */
+#di-ctl{display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:2px;}
+#di-ctl button{
+  background:none;border:none;
+  color:rgba(255,175,210,.7);
+  font-size:13px;cursor:pointer;
+  padding:5px 6px;border-radius:50%;
+  transition:color .2s,background .2s;line-height:1;
+}
+#di-ctl button:hover{color:#fff;background:rgba(255,107,157,.18);}
+#di-playbtn{color:var(--rose) !important;font-size:15px !important;}
+
+/* 展开面板 */
+#di-panel{
+  background:rgba(8,4,14,.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,107,157,.22);border-top:none;
+  border-radius:0 0 20px 20px;
+  overflow:hidden;
+  max-height:0;padding:0 14px;
+  transition:max-height .5s cubic-bezier(.4,0,.2,1),padding .4s ease;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);
+}
+.di-open #di-panel{max-height:310px;padding:10px 14px 16px;}
+
+#di-plbl{
+  font-size:9px;letter-spacing:4px;color:var(--dim);
+  text-transform:uppercase;margin-bottom:10px;
+}
+#di-list{list-style:none;display:flex;flex-direction:column;gap:3px;
+  overflow-y:auto;max-height:245px;}
+#di-list::-webkit-scrollbar{width:3px;}
+#di-list::-webkit-scrollbar-thumb{background:rgba(255,107,157,.3);border-radius:2px;}
+
+.di-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:11px;cursor:pointer;
+  border:1px solid transparent;transition:background .22s,border-color .22s;
+}
+.di-item:hover{background:rgba(255,107,157,.09);}
+.di-item.on{background:rgba(255,107,157,.13);border-color:rgba(255,107,157,.25);}
+.di-emo{font-size:18px;flex-shrink:0;}
+.di-meta{flex:1;min-width:0;}
+.di-ttl{
+  font-size:12.5px;color:rgba(255,218,234,.9);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.di-art-lbl{
+  font-size:10px;color:var(--dim);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.di-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--rose);flex-shrink:0;opacity:0;
+  box-shadow:0 0 6px var(--rose);transition:opacity .3s;
+}
+.di-item.on .di-dot{opacity:1;animation:dotbeat 1.3s ease infinite;}
+@keyframes dotbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.7)}}
+
+/* ===================================================
+   FIXED: SCROLL HINT
+   =================================================== */
+#sh{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  z-index:100;pointer-events:none;transition:opacity .6s;}
+#sh span{font-size:10px;letter-spacing:3px;color:var(--dim);}
+#sh .arr{width:18px;height:18px;border-right:1.5px solid var(--rose);
+  border-bottom:1.5px solid var(--rose);transform:rotate(45deg);
+  animation:bnc 1.6s ease infinite;}
+@keyframes bnc{0%,100%{transform:rotate(45deg) translate(0,0)}50%{transform:rotate(45deg) translate(4px,4px)}}
+
+/* ===================================================
+   SECTION SYSTEM
+   =================================================== */
+.sec{position:relative;z-index:10;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 20px;}
+
+/* Scroll reveal */
+.rv{opacity:0;transform:translateY(44px);
+  transition:opacity .9s cubic-bezier(.25,.8,.25,1),transform .9s cubic-bezier(.25,.8,.25,1);}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.22s}
+.rv.d3{transition-delay:.38s}.rv.d4{transition-delay:.55s}
+.rv.in{opacity:1;transform:translateY(0);}
+
+/* Seamless bg gradients between sections */
+#s0{background:linear-gradient(180deg,#0c0810 0%,#160a1e 100%);}
+#s1{background:linear-gradient(180deg,#160a1e 0%,#1a0a14 100%);}
+#s2{background:linear-gradient(180deg,#1a0a14 0%,#130818 100%);}
+#s3{background:linear-gradient(180deg,#130818 0%,#0e0a16 100%);}
+#s4{background:linear-gradient(180deg,#0e0a16 0%,#160a10 100%);}
+#s5{background:linear-gradient(180deg,#160a10 0%,#0c0812 100%);}
+
+/* Section typography */
+.s-label{font-size:11px;letter-spacing:5px;color:var(--dim);
+  text-transform:uppercase;text-align:center;margin-bottom:6px;}
+.s-title{font-family:'Great Vibes',cursive;font-size:clamp(38px,9vw,72px);
+  background:linear-gradient(135deg,var(--gold),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-align:center;filter:drop-shadow(0 0 20px rgba(255,107,157,.32));}
+.s-sub{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(14px,3vw,18px);color:var(--dim);text-align:center;
+  letter-spacing:2px;margin-top:6px;}
+
+/* ===================================================
+   HERO SECTION
+   =================================================== */
+.hero-big{font-family:'Great Vibes',cursive;font-size:clamp(60px,14vw,120px);
+  background:linear-gradient(135deg,#ffd166 0%,#ff6b9d 50%,#c9184a 100%);
+  background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;animation:shim 5s ease infinite;line-height:1;text-align:center;
+  filter:drop-shadow(0 0 40px rgba(255,107,157,.4));}
+@keyframes shim{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.hero-sub{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(14px,3vw,22px);color:var(--dim);letter-spacing:6px;
+  text-align:center;margin-top:14px;}
+.hero-dateline{margin-top:28px;display:flex;align-items:center;gap:16px;}
+.hdl{flex:1;height:1px;background:linear-gradient(to right,transparent,var(--rose));}
+.hdl.r{background:linear-gradient(to left,transparent,var(--rose));}
+.hdt{font-size:12px;letter-spacing:4px;color:rgba(255,160,190,.6);white-space:nowrap;}
+
+/* ===================================================
+   GREETING CARD (flip)
+   =================================================== */
+.card-scene{perspective:1500px;width:var(--card-w);}
+.fc{width:100%;position:relative;transform-style:preserve-3d;
+  transition:transform 1.3s cubic-bezier(.6,.04,.3,.96);cursor:pointer;}
+.fc.open{transform:rotateY(-180deg);}
+.cf{width:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:24px;overflow:hidden;}
+.cf-front{background:linear-gradient(145deg,#230d1c,#160a18);
+  border:1px solid rgba(255,107,157,.25);
+  box-shadow:0 0 60px rgba(255,107,157,.12),0 30px 60px rgba(0,0,0,.6);
+  padding:36px 28px;display:flex;flex-direction:column;align-items:center;gap:20px;}
+.cf-back{position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto;
+  transform:rotateY(180deg);
+  background:linear-gradient(155deg,#fff5f8,#ffe8f0,#fff0f5);
+  box-shadow:0 0 60px rgba(255,107,157,.18),0 30px 60px rgba(0,0,0,.5);
+  padding:36px 28px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.cf-back::-webkit-scrollbar{width:3px;}
+.cf-back::-webkit-scrollbar-thumb{background:rgba(255,107,157,.3);border-radius:2px;}
+.c-photo{width:100%;aspect-ratio:4/3;border-radius:16px;overflow:hidden;
+  position:relative;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.c-photo img{width:100%;height:100%;object-fit:cover;transition:transform .6s;}
+.c-photo:hover img{transform:scale(1.04);}
+.c-photo::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(20,5,15,.7) 0%,transparent 55%);}
+.c-caption{position:absolute;bottom:13px;left:50%;transform:translateX(-50%);
+  font-family:'Cormorant Garamond',serif;font-style:italic;
+  color:rgba(255,225,240,.9);font-size:13px;letter-spacing:2.5px;z-index:2;white-space:nowrap;}
+.c-ftitle{font-family:'Great Vibes',cursive;font-size:36px;color:var(--rose);
+  text-align:center;filter:drop-shadow(0 0 10px rgba(255,107,157,.55));}
+.c-anniv{width:100%;background:rgba(255,107,157,.08);border:1px solid rgba(255,107,157,.22);
+  border-radius:14px;padding:13px 18px;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.ca-sub{font-size:11px;letter-spacing:4px;color:var(--dim);}
+.ca-main{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);font-style:italic;}
+.tap-hint{font-size:11px;letter-spacing:3px;color:rgba(255,150,180,.4);
+  animation:pls 2s ease infinite;}
+@keyframes pls{0%,100%{opacity:.35}50%{opacity:1}}
+.b-portrait{width:106px;height:106px;border-radius:50%;object-fit:cover;
+  border:3px solid var(--rose);flex-shrink:0;
+  box-shadow:0 0 0 7px rgba(255,107,157,.1),0 8px 24px rgba(0,0,0,.2);}
+.tw-box{width:100%;text-align:center;min-height:100px;}
+#tw{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(15px,3.2vw,19px);color:#5a1830;line-height:1.9;}
+#twc{display:inline-block;width:2px;height:1.1em;background:var(--deep);
+  vertical-align:middle;animation:blk .75s step-end infinite;}
+@keyframes blk{50%{opacity:0}}
+.divdr{width:50px;height:1px;background:linear-gradient(to right,transparent,var(--rose),transparent);}
+.story{font-size:12.5px;color:#7a3050;line-height:2.1;text-align:justify;
+  font-family:'Noto Serif SC',serif;}
+.bsign{font-family:'Great Vibes',cursive;font-size:26px;color:var(--deep);
+  text-align:right;width:100%;}
+
+/* ===================================================
+   MEMORY TIMELINE
+   =================================================== */
+.tl-wrap{width:100%;max-width:580px;position:relative;}
+.tl-axis{position:absolute;left:50%;top:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,transparent,rgba(255,107,157,.45),transparent);
+  transform:translateX(-50%);}
+.tl-row{display:flex;align-items:flex-start;margin-bottom:48px;gap:22px;position:relative;}
+.tl-row:nth-child(even){flex-direction:row-reverse;}
+.tl-body{flex:1;background:rgba(255,107,157,.055);border:1px solid rgba(255,107,157,.18);
+  border-radius:16px;padding:18px 20px;}
+.tl-row:nth-child(even) .tl-body{text-align:right;}
+.tl-dot{width:42px;height:42px;flex-shrink:0;border-radius:50%;
+  background:linear-gradient(135deg,var(--deep),var(--rose));
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  position:relative;z-index:2;box-shadow:0 0 18px rgba(255,107,157,.4);}
+.tl-date{font-size:11px;letter-spacing:3px;color:var(--dim);margin-bottom:5px;}
+.tl-ttl{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold);
+  font-style:italic;margin-bottom:6px;}
+.tl-desc{font-size:13px;color:rgba(255,200,220,.6);line-height:1.8;}
+
+/* ===================================================
+   GALLERY
+   =================================================== */
+.gal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+  width:100%;max-width:620px;}
+.gal-cell{border-radius:16px;overflow:hidden;position:relative;
+  aspect-ratio:1;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  transition:transform .4s ease,box-shadow .4s ease;}
+.gal-cell:hover{transform:scale(1.03);box-shadow:0 16px 40px rgba(255,107,157,.22);}
+.gal-cell:first-child{grid-column:span 2;aspect-ratio:16/7;}
+.gal-cell img{width:100%;height:100%;object-fit:cover;transition:transform .6s;}
+.gal-cell:hover img{transform:scale(1.06);}
+.gal-ov{position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(15,5,12,.82) 0%,transparent 55%);
+  display:flex;align-items:flex-end;padding:14px;opacity:0;transition:opacity .4s;}
+.gal-cell:hover .gal-ov{opacity:1;}
+.gal-lbl{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:14px;color:#ffe8f0;letter-spacing:1.5px;}
+
+/* ===================================================
+   LOVE REASONS
+   =================================================== */
+.reas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+  gap:14px;width:100%;max-width:620px;}
+.rc{perspective:800px;height:158px;cursor:pointer;}
+.rc-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;
+  transition:transform .72s cubic-bezier(.6,.04,.3,.96);}
+.rc.flip .rc-inner{transform:rotateY(180deg);}
+.rf,.rb{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;display:flex;align-items:center;
+  justify-content:center;flex-direction:column;gap:7px;padding:14px;text-align:center;}
+.rf{background:linear-gradient(145deg,rgba(255,107,157,.09),rgba(201,24,74,.06));
+  border:1px solid rgba(255,107,157,.22);box-shadow:0 4px 18px rgba(0,0,0,.3);}
+.rf .num{font-family:'Great Vibes',cursive;font-size:46px;
+  background:linear-gradient(135deg,var(--gold),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.rf .hint{font-size:10px;letter-spacing:3px;color:var(--dim);}
+.rb{transform:rotateY(180deg);
+  background:linear-gradient(145deg,#2a0d1c,#1c0a14);
+  border:1px solid rgba(255,107,157,.28);}
+.rb .rtxt{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:14px;color:rgba(255,210,228,.85);line-height:1.65;}
+
+/* ===================================================
+   MINI GAME
+   =================================================== */
+.g-header{text-align:center;margin-bottom:26px;}
+.g-hint{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(13px,3vw,16px);color:rgba(255,210,228,.6);letter-spacing:1px;margin-top:8px;}
+.g-hud{display:flex;align-items:center;gap:18px;margin-bottom:18px;
+  width:100%;max-width:460px;transition:opacity .4s;}
+.hud-sc{font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;
+  color:var(--gold);white-space:nowrap;min-width:88px;}
+.hud-bw{flex:1;height:8px;background:rgba(255,107,157,.1);border-radius:4px;
+  overflow:hidden;border:1px solid rgba(255,107,157,.18);}
+.hud-b{height:100%;width:0%;background:linear-gradient(to right,var(--deep),var(--rose));
+  border-radius:4px;transition:width .3s;}
+.hud-t{font-family:'Cormorant Garamond',serif;font-size:17px;
+  color:rgba(255,160,190,.7);white-space:nowrap;}
+.g-arena{width:100%;max-width:460px;height:420px;
+  background:rgba(255,107,157,.04);border:1px solid rgba(255,107,157,.16);
+  border-radius:20px;position:relative;overflow:hidden;
+  box-shadow:inset 0 0 40px rgba(255,107,157,.04),0 8px 32px rgba(0,0,0,.4);
+  touch-action:none;user-select:none;}
+.g-arena::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(255,107,157,.035),transparent 65%);}
+.sbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:linear-gradient(135deg,var(--deep),var(--rose));border:none;color:#fff;
+  font-family:'Noto Serif SC',serif;font-size:15px;letter-spacing:2px;
+  padding:14px 36px;border-radius:50px;cursor:pointer;
+  box-shadow:0 4px 24px rgba(201,24,74,.5);transition:transform .2s,box-shadow .2s;z-index:10;}
+.sbtn:hover{transform:translate(-50%,-50%) scale(1.06);}
+.gi{position:absolute;font-size:26px;cursor:pointer;user-select:none;
+  pointer-events:auto;transition:transform .1s ease;will-change:transform,opacity;}
+.gi:active{transform:scale(1.6)!important;}
+.ppop{position:absolute;pointer-events:none;font-size:18px;
+  animation:ppf .65s ease forwards;}
+@keyframes ppf{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--px),var(--py)) scale(.2)}}
+
+/* Result overlays */
+.g-res{position:absolute;inset:0;border-radius:20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;
+  opacity:0;pointer-events:none;transition:opacity .9s ease;
+  padding:28px 24px;text-align:center;overflow-y:auto;}
+.g-res.show{opacity:1;pointer-events:auto;}
+.res-win{background:rgba(10,6,14,.93);}
+.res-lose{background:rgba(10,6,14,.9);}
+.res-ico{font-size:50px;animation:popIn .6s cubic-bezier(.175,.885,.32,1.275) both;}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.res-big{font-family:'Great Vibes',cursive;font-size:clamp(30px,7vw,46px);
+  background:linear-gradient(135deg,var(--gold),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1.15;}
+.res-txt{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(14px,3vw,17px);color:rgba(255,205,225,.8);line-height:1.75;}
+.res-btn{background:linear-gradient(135deg,var(--deep),var(--rose));border:none;color:#fff;
+  font-family:'Noto Serif SC',serif;font-size:13px;letter-spacing:2px;
+  padding:12px 30px;border-radius:50px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(201,24,74,.45);transition:transform .2s;}
+.res-btn:hover{transform:scale(1.06);}
+
+/* ===================================================
+   FINAL
+   =================================================== */
+.f-heart{font-size:76px;display:block;text-align:center;animation:hb 1.6s ease infinite;}
+@keyframes hb{0%,100%{transform:scale(1)}14%{transform:scale(1.18)}28%{transform:scale(1)}}
+.f-wish{font-family:'Great Vibes',cursive;font-size:clamp(34px,8vw,72px);
+  background:linear-gradient(135deg,#ffd166,#ff6b9d,#c9184a);background-size:200%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shim 5s ease infinite;text-align:center;line-height:1.15;
+  filter:drop-shadow(0 0 28px rgba(255,107,157,.38));}
+.f-from{font-family:'Cormorant Garamond',serif;font-style:italic;
+  font-size:clamp(14px,3vw,19px);color:var(--dim);letter-spacing:4px;text-align:center;}
+
+/* ===================================================
+   CLICK HEARTS & BALLOONS
+   =================================================== */
+.ch{position:fixed;pointer-events:none;z-index:9990;font-size:26px;
+  animation:chf 1.2s ease forwards;}
+@keyframes chf{0%{opacity:1;transform:translateY(0) scale(.5) rotate(var(--r));}
+  60%{opacity:.9;transform:translateY(-72px) scale(1.2) rotate(var(--r));}
+  100%{opacity:0;transform:translateY(-130px) scale(.7) rotate(var(--r));}}
+.bal{position:fixed;pointer-events:none;z-index:3;animation:bup linear infinite;}
+@keyframes bup{from{transform:translateY(110vh) translateX(0);opacity:.8;}
+  to{transform:translateY(-10vh) translateX(var(--d));opacity:0;}}
+
+/* ===================================================
+   RESPONSIVE
+   =================================================== */
+@media(max-width:520px){
+  .tl-axis{left:20px;}
+  .tl-row,.tl-row:nth-child(even){flex-direction:row;}
+  .tl-row:nth-child(even) .tl-body{text-align:left;}
+  .reas-grid{grid-template-columns:repeat(2,1fr);}
+  .gal-grid{gap:10px;}
+  .cf-front,.cf-back{padding:26px 18px;}
+}
+</style>
+</head>
+<body>
+
+<!-- FIXED LAYERS -->
+<div id="cur-dot"></div><div id="cur-ring"></div>
+<canvas id="cv-vis"></canvas>
+<canvas id="cv-fw"></canvas><canvas id="cv-pt"></canvas>
+
+<!-- ===================================================
+音乐
+     ===================================================== -->
+<!-- 🎵 歌曲列表：替换每首歌的 src 为你自己的 mp3 链接或本地路径 ./music1.mp3 -->
+<!-- 🎵 title / artist 也可以改成你喜欢的曲目名 -->
+<audio id="aud" preload="none"></audio>
+
+<div id="di">
+  <!-- 折叠胶囊 -->
+  <div id="di-pill" onclick="diToggle()">
+    <div id="di-art">🎵</div>
+    <div id="di-info">
+      <div id="di-marquee"><span id="di-name">点击选择音乐</span></div>
+      <div id="di-eq">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+    <div id="di-ctl">
+      <button onclick="event.stopPropagation();prevSong()" title="上一首">⏮</button>
+      <button id="di-playbtn" onclick="event.stopPropagation();playPause()" title="播放/暂停">▶</button>
+      <button onclick="event.stopPropagation();nextSong()" title="下一首">⏭</button>
+    </div>
+  </div>
+  <!-- 展开面板 -->
+  <div id="di-panel">
+    <p id="di-plbl">✦ &nbsp; 选择音乐 &nbsp; ✦</p>
+    <ul id="di-list"></ul>
+  </div>
+</div>
+
+<div id="sh"><span>向下探索</span><div class="arr"></div></div>
+
+<!-- =====================================================
+     SECTION 0: HERO
+     ===================================================== -->
+<section class="sec" id="s0">
+  <div class="rv" style="display:flex;flex-direction:column;align-items:center;">
+    <p style="font-size:11px;letter-spacing:5px;color:var(--dim);margin-bottom:12px;">✦ &nbsp; 写给我最爱的你（宝宝） &nbsp; ✦</p>
+    <h1 class="hero-big">Happy Birthday</h1>
+    <p class="hero-sub">愿今天所有的温柔，都如期而至</p>
+    <div class="hero-dateline">
+      <div class="hdl"></div>
+      <!-- 📅 替换纪念文字 -->
+      <span class="hdt">和你认识，是我最幸运的事</span>
+      <div class="hdl r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 1: GREETING CARD
+     ===================================================== -->
+<section class="sec" id="s1">
+  <p class="s-label rv">我们的故事</p>
+  <h2 class="s-title rv d1">一封写给宝宝你的信</h2>
+  <div style="height:32px"></div>
+  <div class="card-scene rv d2">
+    <div class="fc" id="fc" onclick="flipCard()">
+
+      <!-- FRONT -->
+      <div class="cf cf-front">
+        <div class="c-photo">
+          <!-- 🖼️ 替换为你们的合影：可上传至仓库填 ./合影.jpg -->
+          <img src="https://picsum.photos/seed/lovers2025/800/600" alt="合影">
+          <span class="c-caption">我们在一起的时光</span>
+        </div>
+        <div class="c-ftitle">今天，只属于你</div>
+        <div class="c-anniv">
+          <!-- 📅 替换纪念日与文字 -->
+          <span class="ca-sub">2026 · 02 · 12 &nbsp;—&nbsp; 陪你走过</span>
+          <span class="ca-main">在一起的第 &nbsp;<strong id="daysnum" style="color:var(--rose)">∞</strong>&nbsp; 天</span>
+        </div>
+        <p class="tap-hint">✦ &nbsp; 点我打开贺卡！！！ &nbsp; ✦</p>
+      </div>
+
+      <!-- BACK -->
+      <div class="cf cf-back">
+        <!-- 🖼️ 替换为另一张照片 ./photo-inner.jpg -->
+        <img class="b-portrait" src="https://picsum.photos/seed/couple2/400/400" alt="照片">
+        <div class="tw-box">
+          <span id="tw"></span><span id="twc"></span>
+        </div>
+        <div class="divdr"></div>
+        <!-- 📝 回忆录........ -->
+        <div class="story">
+          还记得我们第一次见面，游戏里，你在我被敌人拷打时。你义无反顾的站出来，直接帮我打了回去，打死敌人你看到有很多子弹，转头送给了我。。。<br><br>
+          我们一起偷过敌人的背身，趴在辐射区什么也没说，却各自感觉到了心跳；一起在boss点的天台数星星，你抢先说出了我要说的那句话什么话自己猜嘻嘻；一起刷DNA；现在冬天了，你在屏幕上发送的一个个字，让我暖了很久很久。<br><br>
+          谢谢你，在我最不知所措的时候，只是轻轻拍了拍我的背。谢谢你记得我随口提过的每一件小事。谢谢你从不让我一个人难过太久。<br><br>
+          今天是你的生日。愿你生命里所有美好的事都争先恐后来找你，愿你永远被温柔以待——就像你待我的那样。❤️（愿你考上好大学，金榜题名）
+        </div>
+        <!-- 好累，还好有ai-->
+        <div class="bsign">— 爱你的人，留</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 2: MEMORY TIMELINE
+     ===================================================== -->
+<section class="sec" id="s2">
+  <p class="s-label rv">时光相册</p>
+  <h2 class="s-title rv d1">我们走过的日子</h2>
+  <div style="height:44px"></div>
+  <div class="tl-wrap">
+    <div class="tl-axis"></div>
+    <!-- 📅 替换4条时间线为你们真实的纪念日 -->
+    <div class="tl-row rv">
+      <div class="tl-dot">🌸</div>
+      <div class="tl-body">
+        <div class="tl-date">2026 · 02 · 12</div>
+        <div class="tl-ttl">初遇那天</div>
+        <div class="tl-desc">那个黄昏，你站在那里，光都偏向你那一侧。我后来才知道，那是我这辈子最幸运的一天。</div>
+      </div>
+    </div>
+    <div class="tl-row rv d1">
+      <div class="tl-dot">💌</div>
+      <div class="tl-body">
+        <div class="tl-date">2026 · 02 · 13</div>
+        <div class="tl-ttl">在一起了</div>
+        <div class="tl-desc">你说"宝宝"的那一刻，我听见了自己心跳的声音。从那天起，我们开始了同一段旅程。</div>
+      </div>
+    </div>
+    <div class="tl-row rv d2">
+      <div class="tl-dot">✈️</div>
+      <div class="tl-body">
+        <div class="tl-date">2026 · 2 · 14</div>
+        <div class="tl-ttl">第一次加联系方式</div>
+        <div class="tl-desc">我们在游戏里互换联系方式，在抖音微信里一口一个宝宝，我好开心。</div>
+      </div>
+    </div>
+    <div class="tl-row rv d3">
+      <div class="tl-dot">🌟</div>
+      <div class="tl-body">
+        <div class="tl-date">今天 · 你的生日</div>
+        <div class="tl-ttl">又一个新的开始</div>
+        <div class="tl-desc">希望这一年，你所有的愿望都被温柔回应，希望我能陪你走过每一个值得被记住的日子。（那些欺负宝宝的都没有好下场）</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 3: GALLERY
+     ===================================================== -->
+<section class="sec" id="s3">
+  <p class="s-label rv">四季留影</p>
+  <h2 class="s-title rv d1">我们的相册</h2>
+  <div style="height:30px"></div>
+  <!-- 🖼️ 替换下方5张图片为你们的真实合影（上传至仓库后用相对路径） -->
+  <div class="gal-grid rv d2">
+    <div class="gal-cell">
+      <img src="https://picsum.photos/seed/mem1/1200/500" alt="">
+      <div class="gal-ov"><span class="gal-lbl">那天的黄昏，美得像梦</span></div>
+    </div>
+    <div class="gal-cell">
+      <img src="https://picsum.photos/seed/mem2/600/600" alt="">
+      <div class="gal-ov"><span class="gal-lbl">春日的樱花树下</span></div>
+    </div>
+    <div class="gal-cell">
+      <img src="https://picsum.photos/seed/mem3/600/600" alt="">
+      <div class="gal-ov"><span class="gal-lbl">夏夜的星空</span></div>
+    </div>
+    <div class="gal-cell">
+      <img src="https://picsum.photos/seed/mem4/600/600" alt="">
+      <div class="gal-ov"><span class="gal-lbl">秋天第一片落叶</span></div>
+    </div>
+    <div class="gal-cell">
+      <img src="https://picsum.photos/seed/mem5/600/600" alt="">
+      <div class="gal-ov"><span class="gal-lbl">冬日的第一场雪</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 4: LOVE REASONS
+     ===================================================== -->
+<section class="sec" id="s4">
+  <p class="s-label rv">写给你</p>
+  <h2 class="s-title rv d1">爱你的理由</h2>
+  <p class="s-sub rv d2">点击每张卡片，看看我喜欢你的原因 ✦</p>
+  <div style="height:28px"></div>
+  <!-- 💕 替换6条理由为你真正想说的话 -->
+  <div class="reas-grid">
+    <div class="rc rv d1" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">①</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">你的笑容，能让我忘记所有烦恼</span></div>
+      </div>
+    </div>
+    <div class="rc rv d2" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">②</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">你总在我最需要的时候，悄悄出现，给予我安慰</span></div>
+      </div>
+    </div>
+    <div class="rc rv d3" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">③</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">和你在一起，普通的日子都闪闪发光</span></div>
+      </div>
+    </div>
+    <div class="rc rv d1" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">④</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">你让我相信，原来素不相识的人也可以那么温暖</span></div>
+      </div>
+    </div>
+    <div class="rc rv d2" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">⑤</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">你记得我随口说过的每一件小事</span></div>
+      </div>
+    </div>
+    <div class="rc rv d3" onclick="this.classList.toggle('flip')">
+      <div class="rc-inner">
+        <div class="rf"><span class="num">⑥</span><span class="hint">点击查看</span></div>
+        <div class="rb"><span class="rtxt">因为你，我也渐渐成为了更好的人</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 5: MINI GAME  🎮
+     ===================================================== -->
+<section class="sec" id="s5" style="overflow:hidden;">
+  <div class="g-header rv">
+    <p class="s-label">互动小游戏</p>
+    <h2 class="s-title">摘星星</h2>
+    <!-- 🎮 故意说"通关有惊喜"吊胃口，真正通关才揭晓是骗你的 -->
+    <p class="g-hint">✦ 在45秒内点亮20颗星星，通关有大惊喜哦！✦</p>
+  </div>
+
+  <div class="g-hud rv d1" id="ghud" style="opacity:.3;pointer-events:none;">
+    <span class="hud-sc" id="hsc">⭐ 0 / 20</span>
+    <div class="hud-bw"><div class="hud-b" id="hbar"></div></div>
+    <span class="hud-t" id="htm">45s</span>
+  </div>
+
+  <div class="g-arena rv d2" id="garena">
+    <button class="sbtn" id="gbtn" onclick="startGame()">开始游戏 ✨</button>
+
+    <!-- WIN OVERLAY — 骗你的惊喜在这里 😄 -->
+    <div class="g-res res-win" id="res-win">
+      <div class="res-ico" style="animation-delay:.1s">🎊</div>
+      <div class="res-big">恭喜通关！</div>
+      <!-- 😄 揭晓：骗你的小傻瓜！-->
+      <div class="res-txt">
+        哈哈哈……<br>
+        <span style="font-family:'Great Vibes',cursive;font-size:clamp(22px,5vw,30px);
+          background:linear-gradient(135deg,var(--gold),var(--rose));
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+          骗你的，小傻瓜！
+        </span><br><br>
+        哪有什么隐藏彩蛋呀～<br>
+        真正的惊喜，就是——<br>
+        <em style="color:var(--rose);font-size:clamp(15px,3.5vw,19px);
+          font-family:'Great Vibes',cursive;">
+          我爱你，这就是最大的惊喜。
+        </em>
+      </div>
+      <button class="res-btn" onclick="goContinue()">继续看看 ↓</button>
+    </div>
+
+    <!-- LOSE OVERLAY -->
+    <div class="g-res res-lose" id="res-lose">
+      <div class="res-ico">💫</div>
+      <div class="res-big">差一点点！</div>
+      <div class="res-txt">没关系，再来一次<br>你一定可以的 ✨</div>
+      <button class="res-btn" onclick="resetGame()">再玩一次</button>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================
+     SECTION 6: FINAL WISH
+     ===================================================== -->
+<section class="sec" id="s6">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:22px;">
+    <p class="s-label rv">最后，想对你说</p>
+    <span class="f-heart rv d1">❤️</span>
+    <!-- ✍️ 替换为你最想说的那句话 -->
+    <div class="f-wish rv d2">
+      生日快乐<br>希望宝宝天天开心
+    </div>
+    <!-- ✍️ 替换为你的名字与日期 -->
+    <p class="f-from rv d3">— 你最爱的那个人 · 2026年</p>
+  </div>
+</section>
+
+<!-- =====================================================
+     JAVASCRIPT
+     ===================================================== -->
+<script>
+/* ──────────────────────────────────────────
+   纪念日天数   📅 改这里的日期
+   ────────────────────────────────────────── */
+const ANNIV = new Date(2026, 2, 12); // 月份从0开始：2 = 3月
+const daysEl = document.getElementById('daysnum');
+const d = Math.floor((Date.now() - ANNIV) / 864e5);
+if (d > 0) daysEl.textContent = d;
+
+/* ──────────────────────────────────────────
+   自定义光标
+   ────────────────────────────────────────── */
+const cdot = document.getElementById('cur-dot');
+const cring = document.getElementById('cur-ring');
+document.addEventListener('mousemove', e => {
+  cdot.style.left = e.clientX + 'px'; cdot.style.top = e.clientY + 'px';
+  setTimeout(() => { cring.style.left = e.clientX + 'px'; cring.style.top = e.clientY + 'px'; }, 90);
+});
+document.querySelectorAll('button,.rc,.gal-cell,.fc').forEach(el => {
+  el.addEventListener('mouseenter', () => cring.classList.add('big'));
+  el.addEventListener('mouseleave', () => cring.classList.remove('big'));
+});
+
+/* ──────────────────────────────────────────
+   Scroll hint
+   ────────────────────────────────────────── */
+const shEl = document.getElementById('sh');
+window.addEventListener('scroll', () => { shEl.style.opacity = scrollY > 80 ? '0' : '1'; }, { passive: true });
+
+/* ──────────────────────────────────────────
+   IntersectionObserver: 滚动显现
+   ────────────────────────────────────────── */
+const io = new IntersectionObserver(es => {
+  es.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* ──────────────────────────────────────────
+   粒子星尘背景
+   ────────────────────────────────────────── */
+(function() {
+  const cv = document.getElementById('cv-pt'), ctx = cv.getContext('2d');
+  let W, H, pts = [];
+  const rsz = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  rsz(); addEventListener('resize', rsz);
+  class P {
+    constructor(init) {
+      this.x = Math.random() * (W || 800);
+      this.y = init ? Math.random() * (H || 600) : (H || 600) + 10;
+      this.r = Math.random() * 2 + .4;
+      this.vy = -(Math.random() * .45 + .08);
+      this.vx = (Math.random() - .5) * .35;
+      this.a = Math.random() * .5 + .15;
+      this.h = Math.random() * 40 + 315;
+    }
+    tick() {
+      this.y += this.vy; this.x += this.vx; this.a -= .001;
+      if (this.y < -10 || this.a <= 0) Object.assign(this, new P(false));
+    }
+    draw() {
+      ctx.save(); ctx.globalAlpha = Math.max(0, this.a);
+      ctx.fillStyle = ctx.shadowColor = `hsl(${this.h},88%,74%)`;
+      ctx.shadowBlur = 7; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+  }
+  for (let i = 0; i < 130; i++) pts.push(new P(true));
+  (function loop() { ctx.clearRect(0, 0, W, H); pts.forEach(p => { p.tick(); p.draw(); }); requestAnimationFrame(loop); })();
+})();
+
+/* ──────────────────────────────────────────
+   烟花系统（暴露全局 burst 函数）
+   ────────────────────────────────────────── */
+window.burst = (function() {
+  const cv = document.getElementById('cv-fw'), ctx = cv.getContext('2d');
+  let W, H, sparks = [];
+  const rsz = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  rsz(); addEventListener('resize', rsz);
+  const COLS = ['#ffd166', '#ff6b9d', '#ff85b3', '#c9184a', '#ffffff', '#ffb3c6'];
+
+  class Sp {
+    constructor(x, y, col) {
+      this.x = x; this.y = y; this.col = col;
+      const a = Math.random() * Math.PI * 2, s = Math.random() * 5 + 1;
+      this.vx = Math.cos(a) * s; this.vy = Math.sin(a) * s;
+      this.a = 1; this.dc = Math.random() * .022 + .01; this.sz = Math.random() * 2.4 + .7;
+    }
+    tick() { this.x += this.vx; this.y += this.vy; this.vy += .07; this.vx *= .98; this.vy *= .98; this.a -= this.dc; }
+    draw() {
+      ctx.save(); ctx.globalAlpha = Math.max(0, this.a);
+      ctx.fillStyle = ctx.shadowColor = this.col; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.sz, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+  }
+
+  function burst(x, y) {
+    const c = COLS[Math.floor(Math.random() * COLS.length)];
+    for (let i = 0; i < 85; i++) sparks.push(new Sp(x, y, c));
+    for (let t = 0; t < Math.PI * 2; t += .28)
+      sparks.push(new Sp(x + 13 * Math.sin(t) ** 3, y - 10 * (Math.cos(t) - Math.cos(2 * t) / 2 - Math.cos(3 * t) / 8), '#ff6b9d'));
+  }
+
+  let last = 0;
+  (function loop(ts) {
+    ctx.clearRect(0, 0, W, H);
+    if (ts - last > 2700) { burst(Math.random() * W * .7 + W * .15, Math.random() * H * .45 + 40); last = ts; }
+    sparks = sparks.filter(s => s.a > 0);
+    sparks.forEach(s => { s.tick(); s.draw(); });
+    requestAnimationFrame(loop);
+  })();
+
+  return burst;
+})();
+
+/* Click → burst, but NOT on game arena or DI */
+document.addEventListener('click', e => {
+  if (!e.target.closest('#garena,.fc,.rc,#di')) burst(e.clientX, e.clientY);
+});
+
+/* ──────────────────────────────────────────
+   点击爱心
+   ────────────────────────────────────────── */
+const HH = ['❤️', '💕', '💖', '💗', '🌸', '✨', '💫'];
+document.addEventListener('click', e => {
+  if (e.target.closest('#garena,#di,.fc,.rc')) return;
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('div');
+    el.className = 'ch';
+    el.textContent = HH[Math.floor(Math.random() * HH.length)];
+    el.style.cssText = `left:${e.clientX + (Math.random() - .5) * 34}px;top:${e.clientY + (Math.random() - .5) * 18}px;--r:${Math.random() * 40 - 20}deg;animation-delay:${i * .07}s`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1400);
+  }
+});
+
+/* ──────────────────────────────────────────
+   气球
+   ────────────────────────────────────────── */
+(function() {
+  const E = ['🎈', '🎀', '🌸', '💝', '🎁', '🌺'];
+  function spawn() {
+    const el = document.createElement('div'); el.className = 'bal';
+    el.textContent = E[Math.floor(Math.random() * E.length)];
+    el.style.cssText = `left:${Math.random() * 95}vw;font-size:${Math.random() * 18 + 22}px;--d:${Math.random() * 80 - 40}px;animation-duration:${Math.random() * 8 + 10}s;animation-delay:${Math.random() * 3}s`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 16000);
+  }
+  for (let i = 0; i < 5; i++) spawn();
+  setInterval(spawn, 3000);
+})();
+
+/* ──────────────────────────────────────────
+   贺卡翻转 + 打字机
+   ────────────────────────────────────────── */
+let cOpen = false, twDone = false;
+function flipCard() {
+  cOpen = !cOpen;
+  document.getElementById('fc').classList.toggle('open', cOpen);
+  if (cOpen && !twDone) { twDone = true; setTimeout(startTw, 950); }
+}
+
+// ✍️ 替换祝福语
+const TW = ['在你生日这天，', '我想告诉你——', '你是我生命里最美的惊喜，', '因为有你，每一天都值得。', '生日快乐，我最爱的你。❤️'];
+function startTw() {
+  const el = document.getElementById('tw');
+  let li = 0, ci = 0, txt = '';
+  function t() {
+    if (li >= TW.length) return;
+    if (ci < TW[li].length) { txt += TW[li][ci++]; el.innerHTML = txt.replace(/\n/g, '<br>'); setTimeout(t, 65); }
+    else { txt += '\n'; ci = 0; li++; setTimeout(t, 430); }
+  }
+  t();
+}
+
+/* ══════════════════════════════════════════════════
+   🎵  MUSIC SYSTEM — Dynamic Island + Visualizer
+   ══════════════════════════════════════════════════
+   🎵 替换 SONGS 数组中每首歌的 title/artist/icon/src
+      src 可以是网络链接或本地文件 ./music1.mp3
+*/
+const SONGS = [
+  { title:'花海',  artist:'天空仍灿烂，她爱着大海～', icon:'🌸', src:'https://v11-default.365yg.com/cc91be5d84d729ebda186eea1336f579/6999ae32/video/tos/cn/tos-cn-v-0015c800/oY4KENHMkDAqUYAQAVFqA9oACAkgeBSrERfctE/?a=0&ch=0&cr=0&dr=0&er=6&lr=unwatermarked&net=5&cd=0%7C0%7C0%7C0&cv=1&br=3994&bt=3994&cs=0&ds=4&ft=aT_7TQQqUnXfmoZmo0OW_QYaUqiXzV9UkVJEDOIv3bPD-Ipz&mime_type=video_mp4&qs=13&rc=ang2Nm85cjxvNTMzNGkzM0Bpang2Nm85cjxvNTMzNGkzM0AwMS4wMmQ0MmphLS1kLWFzYSMwMS4wMmQ0MmphLS1kLWFzcw%3D%3D&btag=80000e00030000&cquery=106H&dy_q=1771675422&l=20260221200342DF889D7850AF7C051226' },
+  { title:'晴天',        artist:'为你翘课的那一天～', icon:'💕', src:'https://v26-default.365yg.com/bbe2904501798ee9105eae4d1bc4b3ae/6999ae6d/video/tos/cn/tos-cn-v-0015c800/oENDrBXOE8YgEAFgp3OAKmJfVgy9BNAHcEAaen/?a=0&ch=0&cr=0&dr=0&er=6&lr=unwatermarked&net=5&cd=0%7C0%7C0%7C0&cv=1&br=38922&bt=38922&cs=0&ft=aT_7TQQqUnXfmoZmo0OW_QYaUqiX5O9UkVJEDOIv3bPD-Ipz&mime_type=video_mp4&qs=13&rc=amhkaXM5cjY8NzMzNGkzM0BpamhkaXM5cjY8NzMzNGkzM0BpYmUyMmRjZGJhLS1kLWFzYSNpYmUyMmRjZGJhLS1kLWFzcw%3D%3D&btag=80000e00030000&cquery=106H&dy_q=1771675476&l=202602212004367F2651B80358E3F75021' },
+  { title:'雨爱',      artist:'听雨的声音，一滴滴清晰～', icon:'🌹', src:'https://v11-default.365yg.com/f64483b938070a03fd1ab59b6dda6f8c/6999ad66/video/tos/cn/tos-cn-ve-15/oseRugGHQBCIfYOmeBAAIWNLGkENrMz2kdR7E5/?a=0&ch=0&cr=0&dr=0&er=6&lr=unwatermarked&net=5&cd=0%7C0%7C0%7C0&cv=1&br=981&bt=981&cs=0&ds=3&ft=aT_7TQQqUnXfmoZmo0OW_QYaUqiXLL9UkVJEDOIv3bPD-Ipz&mime_type=video_mp4&qs=13&rc=M3NmOm05cmtsNjMzNGkzM0BpM3NmOm05cmtsNjMzNGkzM0BnNGxmMmRrYWJhLS1kLS9zYSNnNGxmMmRrYWJhLS1kLS9zcw%3D%3D&btag=80000e00030000&cquery=106H&dy_q=1771675218&feature_id=cb5bceaf0f8810e794f7733747a60db6&l=202602212000184C6F635B5D5D16E99441' },
+  { title:'爱错',        artist:'王力宏吗？', icon:'✨', src:'https://v26-default.365yg.com/65d04bf53be2edebd4787e4568c6fe66/6999adab/video/tos/cn/tos-cn-ve-15/o8EDOI9AIAAfTEvVQo5gElfACBFBwU1DVGPhwn/?a=0&ch=0&cr=0&dr=0&er=6&lr=unwatermarked&net=5&cd=0%7C0%7C0%7C0&cv=1&br=308&bt=308&cs=0&ds=3&ft=aT_7TQQqUnXfmoZmo0OW_QYaUqiXs19UkVJEDOIv3bPD-Ipz&mime_type=video_mp4&qs=13&rc=ampya205cnJvNjMzNGkzM0Bpampya205cnJvNjMzNGkzM0BmLi5zMmRjLV5hLS1kLS9zYSNmLi5zMmRjLV5hLS1kLS9zcw%3D%3D&btag=80000e00028000&cquery=106H&dy_q=1771675311&feature_id=fea919893f650a8c49286568590446ef&l=2026022120015134E13E233A579EE6ABDB' },
+  { title:'可不可以',          artist:'只想和你永远不分离～', icon:'💖', src:'https://v11-default.365yg.com/8d1f3da9399103be3ac58d459ee91c63/6999add8/video/tos/cn/tos-cn-v-15c800-ce/oQdvUiyiArejAElE2Ci0AGABwHeRAETSf4FAB8/?a=0&br=1199&bt=1199&btag=80000e00028000&cd=0%7C0%7C0%7C0&ch=0&cquery=106H&cr=0&cs=0&cv=1&dr=0&ds=4&dy_q=1771675366&dy_va_biz_cert=&er=6&ft=aT_7TQQqUnXfmoZmo0OW_QYaUqiXQm9UkVJEDOIv3bPD-Ipz&l=202602212002460F85B908F46596F6DEB0&lr=unwatermarked&mime_type=video_mp4&net=5&qs=13&rc=andmZHY5cmRrMzMzbGkzNEBpandmZHY5cmRrMzMzbGkzNEAwL3BlMmRjZmthLS1kLWJzYSMwL3BlMmRjZmthLS1kLWJzcw%3D%3D' },
+];
+
+const aud      = document.getElementById('aud');
+const diEl     = document.getElementById('di');
+const diName   = document.getElementById('di-name');
+const diArt    = document.getElementById('di-art');
+const diPbtn   = document.getElementById('di-playbtn');
+const diList   = document.getElementById('di-list');
+const diMarquee= document.getElementById('di-marquee');
+
+let curIdx   = -1;
+let isPlaying= false;
+let diOpen   = false;
+
+/* ── 构建歌曲列表 ── */
+SONGS.forEach((s, i) => {
+  const li = document.createElement('li');
+  li.className = 'di-item';
+  li.innerHTML = `
+    <span class="di-emo">${s.icon}</span>
+    <div class="di-meta">
+      <div class="di-ttl">${s.title}</div>
+      <div class="di-art-lbl">${s.artist}</div>
+    </div>
+    <span class="di-dot"></span>`;
+  li.addEventListener('click', () => { selectSong(i); diClose(); });
+  diList.appendChild(li);
+});
+
+/* ── 开/关面板 ── */
+function diToggle(){ diOpen ? diClose() : diOpenPanel(); }
+function diOpenPanel(){ diOpen=true;  diEl.classList.add('di-open'); }
+function diClose(){    diOpen=false; diEl.classList.remove('di-open'); }
+document.addEventListener('click', e => {
+  if(diOpen && !e.target.closest('#di')) diClose();
+}, true);
+
+/* ── 歌名跑马灯：用 mask-image 淡出，无 overflow 裁剪 ── */
+function updateMarquee(text){
+  diName.classList.remove('scroll');
+  diName.textContent = text;
+  // 两帧后测量（等待渲染）
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{
+    const nameW   = diName.offsetWidth;
+    const trackW  = diMarquee.offsetWidth;
+    if(nameW > trackW - 10){
+      const dist = -(nameW - trackW + 20);
+      const dur  = Math.max(6, Math.abs(dist) / 24);
+      diName.style.setProperty('--dist', dist+'px');
+      diName.style.setProperty('--dur',  dur+'s');
+      void diName.offsetWidth; // reflow
+      diName.classList.add('scroll');
+    }
+  }));
+}
+
+/* ── 选歌 & 播放 ── */
+function selectSong(idx){
+  curIdx = idx;
+  const s = SONGS[idx];
+  aud.src  = s.src;
+  aud.loop = true;
+
+  diArt.textContent = s.icon;
+  updateMarquee(`${s.title}  —  ${s.artist}`);
+
+  // 列表高亮
+  diList.querySelectorAll('.di-item').forEach((li,i)=>
+    li.classList.toggle('on', i===idx));
+
+  startPlay();
+  initAudioCtx();
+}
+
+function startPlay(){
+  aud.volume = 0.3;
+  aud.play().then(()=>{
+    isPlaying=true;
+    diPbtn.textContent='⏸';
+    diEl.classList.add('di-playing');
+  }).catch(()=>{});
+}
+
+function playPause(){
+  if(curIdx<0){ diOpenPanel(); return; }
+  if(isPlaying){
+    aud.pause(); isPlaying=false;
+    diPbtn.textContent='▶';
+    diEl.classList.remove('di-playing');
+  } else { startPlay(); }
+}
+
+function prevSong(){ selectSong((curIdx<=0?SONGS.length:curIdx)-1); }
+function nextSong(){ selectSong((curIdx+1)%SONGS.length); }
+aud.addEventListener('ended', nextSong);
+function toggleMusic(){ playPause(); }
+
+/* ══════════════════════════════════════════════════
+   🎼  BACKGROUND VISUALIZER — Web Audio API
+       超低透明度跳动波形，渲染在最底层 canvas
+   ══════════════════════════════════════════════════ */
+let audioCtx = null, analyser = null, srcNode = null, visRaf = null;
+
+function initAudioCtx() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+    srcNode  = audioCtx.createMediaElementSource(aud);
+    srcNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    startVis();
+  } catch(e) { startSimVis(); }
+}
+
+const visCv  = document.getElementById('cv-vis');
+const visCtx = visCv.getContext('2d');
+let   visW, visH;
+function resizeVis() { visW = visCv.width = innerWidth; visH = visCv.height = innerHeight; }
+resizeVis(); addEventListener('resize', resizeVis);
+
+/* Real-data visualizer */
+function startVis() {
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  function draw() {
+    visRaf = requestAnimationFrame(draw);
+    visCtx.clearRect(0, 0, visW, visH);
+    if (!isPlaying) return;
+    analyser.getByteFrequencyData(buf);
+    const bars  = 60;
+    const bw    = Math.floor(visW / (bars * 2 + 4));
+    const gap   = 3;
+    const cx    = visW / 2;
+    const base  = visH - 2;
+    const step  = Math.floor(buf.length / bars);
+
+    for (let i = 0; i < bars; i++) {
+      const val = buf[i * step] / 255;
+      const h   = val * visH * 0.55 + 2;
+      const x   = cx + i * (bw + gap);
+      const xm  = cx - i * (bw + gap) - bw;
+      const alpha = val * 0.18 + 0.03;
+      const hue   = 330 + i * 0.4;
+
+      visCtx.save();
+      visCtx.globalAlpha = alpha;
+      const g = visCtx.createLinearGradient(0, base - h, 0, base);
+      g.addColorStop(0,   `hsla(${hue},90%,75%,1)`);
+      g.addColorStop(1,   `hsla(${hue},70%,50%,0)`);
+      visCtx.fillStyle = g;
+      visCtx.shadowColor = `hsl(${hue},80%,65%)`;
+      visCtx.shadowBlur  = 8;
+      // right bar
+      visCtx.fillRect(x,  base - h, bw, h);
+      // mirror left bar
+      visCtx.fillRect(xm, base - h, bw, h);
+      visCtx.restore();
+    }
+  }
+  draw();
+}
+
+/* Simulated visualizer fallback (no AudioContext) */
+function startSimVis() {
+  let t = 0;
+  function draw() {
+    visRaf = requestAnimationFrame(draw);
+    visCtx.clearRect(0, 0, visW, visH);
+    if (!isPlaying) return;
+    t += 0.04;
+    const bars = 60, bw = Math.max(3, Math.floor(visW / (bars * 2 + 8)));
+    const gap  = 3, cx = visW / 2, base = visH - 2;
+    for (let i = 0; i < bars; i++) {
+      const val   = (Math.sin(t * 1.8 + i * 0.28) * 0.4 + 0.5) *
+                    (Math.sin(t * 0.7 + i * 0.18) * 0.3 + 0.7);
+      const h     = val * visH * 0.48 + 4;
+      const alpha = val * 0.14 + 0.03;
+      const hue   = 330 + i * 0.4;
+      const x     = cx + i * (bw + gap);
+      const xm    = cx - i * (bw + gap) - bw;
+      visCtx.save();
+      visCtx.globalAlpha = alpha;
+      const g = visCtx.createLinearGradient(0, base - h, 0, base);
+      g.addColorStop(0, `hsla(${hue},88%,74%,1)`);
+      g.addColorStop(1, `hsla(${hue},68%,48%,0)`);
+      visCtx.fillStyle = g; visCtx.shadowColor = `hsl(${hue},78%,64%)`; visCtx.shadowBlur = 7;
+      visCtx.fillRect(x,  base - h, bw, h);
+      visCtx.fillRect(xm, base - h, bw, h);
+      visCtx.restore();
+    }
+  }
+  draw();
+}
+/* 未加载 AudioContext 前先跑模拟版，有 ctx 后自动切换 */
+startSimVis();
+
+/* ──────────────────────────────────────────
+   ★  小游戏  ★
+   ────────────────────────────────────────── */
+const GAME_NEED = 20, GAME_TIME = 45;
+const POOL = ['⭐', '💫', '✨', '🌟', '❤️', '🌸', '💕', '🎀'];
+let gRunning = false, gScore = 0, gTime = 0;
+let gTimer = null, gSpawn = null, gItems = [];
+
+const arena = document.getElementById('garena');
+const hsc = document.getElementById('hsc');
+const hbar = document.getElementById('hbar');
+const htm = document.getElementById('htm');
+const ghud = document.getElementById('ghud');
+
+function startGame() {
+  document.getElementById('gbtn').style.display = 'none';
+  document.getElementById('res-win').classList.remove('show');
+  document.getElementById('res-lose').classList.remove('show');
+  gScore = 0; gTime = GAME_TIME; gRunning = true;
+  ghud.style.opacity = '1'; ghud.style.pointerEvents = 'auto';
+  updateHud();
+  gTimer = setInterval(() => { if (!gRunning) return; gTime--; updateHud(); if (gTime <= 0) endGame(false); }, 1000);
+  gSpawn = setInterval(spawnItem, 680);
+  spawnItem(); spawnItem(); spawnItem();
+}
+
+function spawnItem() {
+  if (!gRunning) return;
+  const el = document.createElement('div'); el.className = 'gi';
+  el.textContent = POOL[Math.floor(Math.random() * POOL.length)];
+  const aw = arena.clientWidth - 50, ah = arena.clientHeight - 50;
+  const sx = Math.random() * aw + 10, sy = Math.random() * ah * .7 + 10;
+  // Floating animation via JS
+  el.style.cssText = `left:${sx}px;top:${sy}px;transform:scale(0);opacity:0;transition:transform .3s ease,opacity .3s ease;`;
+  arena.appendChild(el); gItems.push(el);
+
+  // Fade in
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transform = 'scale(1)'; el.style.opacity = '1';
+  }));
+
+  // Gentle float
+  let fy = sy, phase = Math.random() * Math.PI * 2, amp = Math.random() * 8 + 4;
+  let fraf;
+  function floatAnim() {
+    if (!el.parentNode) return;
+    phase += .04;
+    el.style.top = (fy + Math.sin(phase) * amp) + 'px';
+    fraf = requestAnimationFrame(floatAnim);
+  }
+  fraf = requestAnimationFrame(floatAnim);
+
+  // Auto-expire
+  const expire = (Math.random() * 2000 + 2500);
+  const tid = setTimeout(() => {
+    cancelAnimationFrame(fraf);
+    el.style.transform = 'scale(0)'; el.style.opacity = '0';
+    setTimeout(() => { el.remove(); gItems = gItems.filter(i => i !== el); }, 350);
+  }, expire);
+
+  el.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    if (!gRunning || !el.parentNode) return;
+    clearTimeout(tid); cancelAnimationFrame(fraf);
+    el.style.transform = 'scale(1.8)'; el.style.opacity = '0';
+    gScore++; updateHud();
+    popParticles(sx, sy);
+    gItems = gItems.filter(i => i !== el);
+    setTimeout(() => el.remove(), 350);
+    if (gScore >= GAME_NEED) endGame(true);
+  }, { once: true });
+}
+
+function popParticles(x, y) {
+  for (let i = 0; i < 5; i++) {
+    const p = document.createElement('div'); p.className = 'ppop';
+    p.textContent = ['✨', '💥', '⭐', '💖'][Math.floor(Math.random() * 4)];
+    p.style.cssText = `left:${x}px;top:${y}px;--px:${(Math.random() - .5) * 70}px;--py:${(Math.random() - .5) * 70}px;animation-delay:${i * .06}s`;
+    arena.appendChild(p);
+    setTimeout(() => p.remove(), 800);
+  }
+}
+
+function updateHud() {
+  hsc.textContent = `⭐ ${gScore} / ${GAME_NEED}`;
+  hbar.style.width = Math.min(gScore / GAME_NEED * 100, 100) + '%';
+  htm.textContent = gTime + 's';
+  htm.style.color = gTime <= 10 ? 'var(--rose)' : 'rgba(255,160,190,.7)';
+}
+
+function endGame(win) {
+  gRunning = false;
+  clearInterval(gTimer); clearInterval(gSpawn);
+  gItems.forEach(el => el.remove()); gItems = [];
+  if (win) {
+    // Big celebration fireworks
+    for (let i = 0; i < 8; i++) setTimeout(() => {
+      burst(Math.random() * innerWidth * .9 + innerWidth * .05, Math.random() * innerHeight * .6 + 50);
+    }, i * 220);
+  }
+  setTimeout(() => {
+    document.getElementById(win ? 'res-win' : 'res-lose').classList.add('show');
+  }, 300);
+}
+
+function resetGame() {
+  document.getElementById('res-lose').classList.remove('show');
+  ghud.style.opacity = '.3'; ghud.style.pointerEvents = 'none';
+  document.getElementById('gbtn').style.display = '';
+  gScore = 0; gTime = GAME_TIME; updateHud();
+  htm.style.color = 'rgba(255,160,190,.7)';
+}
+
+function goContinue() {
+  document.getElementById('s6').scrollIntoView({ behavior: 'smooth' });
+  // Trigger confetti burst when final section arrives
+  setTimeout(() => {
+    for (let i = 0; i < 6; i++) setTimeout(() => burst(Math.random() * innerWidth, Math.random() * innerHeight * .5), i * 300);
+  }, 800);
+}
+</script>
+</body>
+</html>
